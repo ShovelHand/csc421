@@ -1,22 +1,22 @@
 
 import random
 import math
+import collections
 #import pdb; pdb.set_trace()
 
 alphabet = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n',
             'o','p','q','r','s','t','u','v','w','x','y','z']
-grid = [['0' for i in range(100)] for j in range(100)]
-graph = {}
-#(upper triangular) adjacency matrix
-adjMatrix = [[0 for i in range(len(alphabet))]for j in range(len(alphabet))]
 
+graphList = []
 
 neighbourList = []
+
+discoveredList = []
 
 def euclidDist(x1,y1,x2,y2):
     return math.sqrt((x1-x2)**2 +(y1-y2)**2)
 
-def getFiveNearest(lst, i ,j):
+def getFiveNearest(grid, lst, i ,j):
     nearestFive = []
     for city in lst:
         for y in range(100):
@@ -29,7 +29,7 @@ def getFiveNearest(lst, i ,j):
    
     return nearestFive[:5]
                       
-def findNeighbours(c, i, j, lst, depth):
+def findNeighbours(grid, c, i, j, lst, depth):
 
     for n in range(100):
         for m in range(100):
@@ -37,10 +37,10 @@ def findNeighbours(c, i, j, lst, depth):
                 lst.append(grid[m][n]) 
     
     if(len(lst) >= 10):
-        return getFiveNearest(lst, i, j)
+        return getFiveNearest(grid, lst, i, j)
 
 #pick 3 of the five cities on the list to be adjacent to current city
-def populateAdjMatrix(city, lst):
+def populateAdjMatrix(city, lst, adjMatrix, graph):
     #city = grid[i][j]
     del lst[random.randrange(len(lst))]
     del lst[random.randrange(len(lst))]
@@ -62,20 +62,27 @@ def populateAdjMatrix(city, lst):
         if adjacencies <= 3 and neighbourAdjacencies <3:
             adjMatrix[alphabet.index(x[0])][row] = 1
             adjMatrix[row][alphabet.index(x[0])] = 1
+            
+            graph[city].append(x)
+            graph[x[0]].append([city, x[1]])
 
-            graph.update({city : x})
-            graph[city] += x
-        
+            
 
-        
                 
 def makeGraph():
+    grid = [['0' for i in range(100)] for j in range(100)]
+
+    graph = dict()
+    graph = { 'a' : [],'b': [],'c': [],'d': [],'e': [],'f': [],
+          'g': [],'h': [],'i': [],'j': [],'k': [],'l': [],
+          'm': [],'n': [], 'o': [],'p': [],'q': [],'r': [],
+          's': [],'t': [],'u': [],'v': [],'w': [],'x': [],'y': [],'z': [] }
+    adjMatrix = [[0 for i in range(len(alphabet))]for j in range(len(alphabet))]
+
     #initialize grid
     for j in range(0,100):
         for i in range(0,100):
             grid[i][j] = '0'
-
-    random.seed(18) #let our random numbers be repeatable and debuggable
 
     for i in alphabet:
         placed = False
@@ -86,28 +93,17 @@ def makeGraph():
                 grid[x][y] = i
                 placed = True
  #uncomment to print the grid of letters (not quite to scale)
-            
-    for j in range(0,100):
-        rowOut = ""
-        for i in range(0,100):
-            if(grid[i][j] == '0'):
-                rowOut += " "
-        else:
-            rowOut += grid[i][j]
-        
-    print(rowOut )
-   
+
 #cities placed in grid. Now determine adjacencies
+    
     for j in range(0,100):
         for i in range(0,100):
            if(grid[i][j] != '0'):
                 neighbourList = []
             #    print(grid[i][j])
-                neighbourList = findNeighbours(grid[i][j], i, j, neighbourList, 1)
-                if grid[i][j] == 't':
-                    print(neighbourList)
-                #print(neighbourList)
-                populateAdjMatrix(grid[i][j], neighbourList)
+                neighbourList = findNeighbours(grid,grid[i][j], i, j, neighbourList, 1)
+            #    print(neighbourList)
+                populateAdjMatrix(grid[i][j], neighbourList, adjMatrix, graph)
 
     
     for j in range(26):
@@ -115,31 +111,82 @@ def makeGraph():
             if adjMatrix[i][j] == 1 and adjMatrix[j][i] ==0:
                 adjMatrix[j][i] = 1
                 
-                
-            
-makeGraph()
+    sorted(graph.items(), key=lambda x: x[0]) 
+    graphList.append(graph)  
 
-'''# print not to scale layout of cities
-for j in range(100):
-    row  = ""
-    for i in range(100):
-        if grid[i][j] != '0':
-            row += grid[i][j]
-        else:
-            row += ' '
-    print(row)
 '''
-
+# print not to scale layout of cities
+    for j in range(100):
+        row  = ""
+        for i in range(100):
+            if grid[i][j] != '0':
+                row += grid[i][j]
+            else:
+                row += ' '
+        print(row)
+'''
+#print an adjacency matrix
+'''
 print ('   abcdefghijklmnopqrstuvwxyz')
 for j in range(26):
     row = alphabet[j]
     row += ': '
     for i in range(26):
         row += str(adjMatrix[i][j])
-    print(row)
+#    print(row)
+'''
+'''
+for x in graph:
+    print(x, graph[x])
+'''
+def depthFirstSearch(G, v, goal):
+    discoveredList.append(v)
+   
+    if( goal in discoveredList):
+        success = "found " + goal
+        print(success)
+        return
+    print(v)
+    for x in G[v]:
+        if x[0] not in discoveredList:
+            depthFirstSearch(G, x[0], goal)
+    
+#depthFirstSearch(graph, 'a','z')
+def menu():
+    print("Top Menu")
+    print("enter an option by number")
+    print("1: create 100 different graphs with user input random seed")
+    print("2: print a graph dictionary by index")
+    print("3: depth-first-search on graph by index")
+    option = input("what next?")
+
+    if option == '1':
+      #  graphList = []
+        seed = input("input random seed")
+        random.seed(int(seed))
+        print("making 100 graphs from seed")
+        for x in range(8):  #will be 100, but not spending the time on that now
+            makeGraph()
+                
+        menu()
+
+    if option == '2':
+        index = input("enter an index (integer)")
+        graph = graphList[int(index)]
+        for x in graph:
+            print(x, graph[x]) 
+        menu()
+
+    if option == '3':
+        discoveredList.clear()
+        index = input("enter an index (integer)")
+        depthFirstSearch(graphList[int(index)], 'a', 'z')
+        menu()
+menu()
 
 
         
-        
+    
+    
 
       
