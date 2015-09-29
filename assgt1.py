@@ -2,20 +2,37 @@
 import random
 import math
 import collections
+import time
 #import pdb; pdb.set_trace()
+
+#some global variables, global for convenience
 
 alphabet = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n',
             'o','p','q','r','s','t','u','v','w','x','y','z']
 
-graphList = []
+#list of graphs generated pseudo-randomly
+graphList = [] 
+#used to keep track of nearest neighbours of a node when determining adjacency
+neighbourList = [] 
 
-neighbourList = []
-
+#list of vertices discovered (traversed) in DFS
 discoveredList = []
 
+exploredCount = []
+
+def setExploredCount(x):
+    exploredCount = x
+
+def getExploredCount():
+    return exploredCount
+
+#determines the distance between city1(x1,y1) and city2(x2,y2)
 def euclidDist(x1,y1,x2,y2):
     return math.sqrt((x1-x2)**2 +(y1-y2)**2)
 
+#graph generating functions
+#none of this is done efficiently at the moment 
+#return nearest five cities by euclidean distance
 def getFiveNearest(grid, lst, i ,j):
     nearestFive = []
     for city in lst:
@@ -139,6 +156,28 @@ for j in range(26):
 for x in graph:
     print(x, graph[x])
 '''
+
+#adapted from pseudocode from breadth-first search wikipedia entry
+def breadthFirstSearch(G, v, goal):
+    discoveredList.append(v) #discovered list is the frontier here
+    exploredList = []
+
+    while(len(discoveredList) > 0):
+        u = discoveredList.pop(0)
+        exploredList.append(u)
+    #    print(u)
+        if u == goal:
+            exploredCount.append(len(exploredList))
+            print("found it")
+            break
+
+        for x in G[u]:
+            if x[0] not in discoveredList and x[0] not in exploredList:
+                discoveredList.append(x[0])
+                if(x[0] == goal):
+                    break
+
+#adapted from pseudocode from depth-first search wikipedia entry
 def depthFirstSearch(G, v, goal):
     discoveredList.append(v)
    
@@ -146,18 +185,20 @@ def depthFirstSearch(G, v, goal):
         success = "found " + goal
         print(success)
         return
-    print(v)
+ #   print(v)
     for x in G[v]:
         if x[0] not in discoveredList:
             depthFirstSearch(G, x[0], goal)
     
-#depthFirstSearch(graph, 'a','z')
 def menu():
     print("Top Menu")
     print("enter an option by number")
     print("1: create 100 different graphs with user input random seed")
     print("2: print a graph dictionary by index")
     print("3: depth-first-search on graph by index")
+    print("4: run DFS on all graphs and output stats")
+    print("5: run BFS on graph by index")
+    print("6: run BFS on on all graphs and output stats")
     option = input("what next?")
 
     if option == '1':
@@ -165,7 +206,7 @@ def menu():
         seed = input("input random seed")
         random.seed(int(seed))
         print("making 100 graphs from seed")
-        for x in range(8):  #will be 100, but not spending the time on that now
+        for x in range(4):  #will be 100, but not spending the time on that now
             makeGraph()
                 
         menu()
@@ -173,14 +214,64 @@ def menu():
     if option == '2':
         index = input("enter an index (integer)")
         graph = graphList[int(index)]
-        for x in graph:
-            print(x, graph[x]) 
+
+        for x in alphabet: #this way we get it in alpha order instead of
+            print(x, graph[x])#dictionary key order. Much more readable
+            
         menu()
 
     if option == '3':
         discoveredList.clear()
         index = input("enter an index (integer)")
         depthFirstSearch(graphList[int(index)], 'a', 'z')
+        menu()
+
+    if option == '4':
+        averageTime = 0
+        averageNodesVisited = 0
+        for x in graphList:
+            print('\n')
+            discoveredList.clear()
+            t0 = time.time()
+            depthFirstSearch(x, 'a','z')
+            averageTime += time.time() - t0
+            averageNodesVisited += len(discoveredList)
+        averageTime /= len(graphList)
+        averageNodesVisited /= len(graphList)
+        output = "average time of DFS on all graphs was " + str(averageTime)
+        print(output)
+        output = "average nodes visited (space complexity of discovered list) was " + str(averageNodesVisited)
+        print(output)
+        menu()
+
+    if option == '5':
+        discoveredList.clear()
+        index = input("enter an index (integer)")
+        breadthFirstSearch(graphList[int(index)], 'a', 'z')
+        menu()
+
+    if option == '6':
+        averageTime = 0
+        averageNodesVisited = 0
+        exploredCount.clear()
+
+        for x in graphList:
+            print('\n')
+            discoveredList.clear()
+            t0 = time.time()
+            breadthFirstSearch(x, 'a','z')
+            averageTime += time.time() - t0
+
+        for x in exploredCount:
+            averageNodesVisited += x
+
+        averageNodesVisited += len(discoveredList)
+        averageTime /= len(graphList)
+        averageNodesVisited /= len(graphList)
+        output = "average time of DFS on all graphs was " + str(averageTime)
+        print(output)
+        output = "average nodes visited (space complexity of discovered list) was " + str(averageNodesVisited)
+        print(output)
         menu()
 menu()
 
