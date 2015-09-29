@@ -47,14 +47,27 @@ def getFiveNearest(grid, lst, i ,j):
     return nearestFive[:5]
                       
 def findNeighbours(grid, c, i, j, lst, depth):
-
-    for n in range(100):
-        for m in range(100):
+    leftCol = i -depth
+    if leftCol < 0:
+        leftCol = 0
+    rightCol = i + depth
+    if rightCol > 100:
+        rightCol = 100
+    top = j - depth
+    if top < 0:
+        top = 0
+    bottom = j + depth
+    if bottom > 100:
+        bottom = 100
+    for n in range(top, bottom):
+        for m in range(leftCol, rightCol):
             if(grid[m][n] != '0' and (grid[m][n] != c) and ((grid[m][n])) not in lst):
-                lst.append(grid[m][n]) 
-    
-    if(len(lst) >= 10):
+                lst.append(grid[m][n])
+                
+    if(len(lst) >= 5):
         return getFiveNearest(grid, lst, i, j)
+    else:
+         return findNeighbours(grid, c, i, j, lst, depth+1)
 
 #pick 3 of the five cities on the list to be adjacent to current city
 def populateAdjMatrix(city, lst, adjMatrix, graph):
@@ -119,7 +132,7 @@ def makeGraph():
                 neighbourList = []
             #    print(grid[i][j])
                 neighbourList = findNeighbours(grid,grid[i][j], i, j, neighbourList, 1)
-            #    print(neighbourList)
+           #     print(neighbourList)
                 populateAdjMatrix(grid[i][j], neighbourList, adjMatrix, graph)
 
     
@@ -206,7 +219,7 @@ def menu():
         seed = input("input random seed")
         random.seed(int(seed))
         print("making 100 graphs from seed")
-        for x in range(4):  #will be 100, but not spending the time on that now
+        for x in range(16):  #will be 100, but not spending the time on that now
             makeGraph()
                 
         menu()
@@ -234,11 +247,10 @@ def menu():
             discoveredList.clear()
             t0 = time.time()
             depthFirstSearch(x, 'a','z')
-            averageTime += time.time() - t0
+            totalTime += time.time() - t0
             averageNodesVisited += len(discoveredList)
-        averageTime /= len(graphList)
         averageNodesVisited /= len(graphList)
-        output = "average time of DFS on all graphs was " + str(averageTime)
+        output = "average time of DFS on all graphs was " + str(totalTime)
         print(output)
         output = "average nodes visited (space complexity of discovered list) was " + str(averageNodesVisited)
         print(output)
