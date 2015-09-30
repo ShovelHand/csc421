@@ -19,23 +19,16 @@ neighbourList = []
 #list of vertices discovered (traversed) in DFS
 discoveredList = []
 exploredList = []
+SLDlist = []
+#the following x,y are used to get coords of goal city (z)
+xGoal = -1
+yGoal = -1
 
 exploredCount = []
 
 foundList = []
 
 nodesTraversed = 0
-
-class result(Enum):
-    failure = 0
-    success = 1
-    cutoff = 2
-
-def setExploredCount(x):
-    exploredCount = x
-
-def getExploredCount():
-    return exploredCount
 
 #determines the distance between city1(x1,y1) and city2(x2,y2)
 def euclidDist(x1,y1,x2,y2):
@@ -107,7 +100,17 @@ def populateAdjMatrix(city, lst, adjMatrix, graph):
             graph[city].append(x)
             graph[x[0]].append([city, x[1]])
 
-            
+#make list of SLD from all cities to goal, sld to z is last element in every
+#entry of the graph dictionary
+def makeSLDlist(graph, grid):
+    global xGoal
+    global yGoal
+    foundGoal = False
+
+    for j in range(100):
+        for i in range(100):
+            if grid[i][j] in alphabet:
+                graph[grid[i][j]].append(euclidDist(i,j,xGoal,yGoal))       
 
                 
 def makeGraph():
@@ -132,6 +135,11 @@ def makeGraph():
             y = random.randrange(100)
             if(grid[x][y] == '0'):
                 grid[x][y] = i
+                if(i == 'z'):
+                    global xGoal
+                    global yGoal
+                    xGoal = x
+                    yGoal = y
                 placed = True
  #uncomment to print the grid of letters (not quite to scale)
 
@@ -151,7 +159,8 @@ def makeGraph():
         for i in range(26):
             if adjMatrix[i][j] == 1 and adjMatrix[j][i] ==0:
                 adjMatrix[j][i] = 1
-                
+
+    makeSLDlist(graph, grid)
     sorted(graph.items(), key=lambda x: x[0]) 
     graphList.append(graph)  
 
@@ -211,10 +220,10 @@ def depthFirstSearch(G, v, goal):
     nodesTraversed += 1
     if( v == goal):
         success = "found " + goal
-        print(success)
+   #     print(success)
         foundList.append(1)
         return
-    print(v)
+ #   print(v)
        
     for x in G[v]:
         if x[0] not in discoveredList:
@@ -222,7 +231,7 @@ def depthFirstSearch(G, v, goal):
             
 
 #code adapted from class text
-            #recursive depth limited search
+#recursive depth limited search. return 1 for success, 2 for limit cutoff, 0 for failure
 def recursiveDLS(G, v, goal, limit):
     global nodesTraversed
     nodesTraversed += 1
@@ -254,12 +263,35 @@ def recursiveDLS(G, v, goal, limit):
 
     
 def iterativeDeepeningSearch(G,v,goal):
-    discoveredList.clear()
-    discoveredList.append(v)
     for depth in range(0,100):
+        discoveredList.clear()
         result = recursiveDLS(G,v,goal,depth)
         if result !=2:
             return result
+        
+                
+#params are graph, vertex, and x,y coords of goal
+def greedySearch(G,v,goal, x,y):
+    global nodesTraversed
+    nodesTraversed += 1
+    print(v)
+
+    if v == goal: #found goal state
+        success = "found " + goal
+        print(success)
+        foundList.append(1)
+        output = "found with depth limit " + str(limit)
+        print(output)
+        foundList.append(1)
+        return 1
+
+        adjacencies = []
+        for x in G[v]:
+            if x[0] not in discoveredList:
+                discoveredList.append(v)
+                return recursiveDLS(G, x[0], goal, limit - 1)
+                
+    return 0
     
 def menu():
     print('\n')
@@ -273,6 +305,7 @@ def menu():
     print("6: run BFS on on all graphs and output stats")
     print("7: run recursiveDLS on graph by index")
     print("8: run IDFS on all graphs and output stats")
+    print("9: construct shortest linear dist list for graphby index")
     option = input("what next?")
 
     if option == '1':
@@ -404,6 +437,11 @@ def menu():
         output = "average space complexity (list of visted nodes) was " + str(averageNodesVisited / len(graphList))
         print(output)
         menu()
+
+        if option == '9':
+            SLDlist.clear()
+            index = input("enter an index (integer)")
+            
 menu()
 
 
