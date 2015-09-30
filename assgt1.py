@@ -19,7 +19,7 @@ neighbourList = []
 #list of vertices discovered (traversed) in DFS
 discoveredList = []
 exploredList = []
-SLDlist = []
+SLDlist =[]
 #the following x,y are used to get coords of goal city (z)
 xGoal = -1
 yGoal = -1
@@ -106,11 +106,15 @@ def makeSLDlist(graph, grid):
     global xGoal
     global yGoal
     foundGoal = False
-
+    lst =[]
     for j in range(100):
         for i in range(100):
             if grid[i][j] in alphabet:
-                graph[grid[i][j]].append(euclidDist(i,j,xGoal,yGoal))       
+                lst.append((grid[i][j], euclidDist(i,j,xGoal,yGoal)))
+                #graph[grid[i][j]].append(euclidDist(i,j,xGoal,yGoal))
+               #print(graph[grid[i][j]][0][0])
+    sorted(lst, key=lambda x: x[0])
+    SLDlist.append(lst)
 
                 
 def makeGraph():
@@ -220,10 +224,10 @@ def depthFirstSearch(G, v, goal):
     nodesTraversed += 1
     if( v == goal):
         success = "found " + goal
-   #     print(success)
+        print(success)
         foundList.append(1)
         return
- #   print(v)
+    print(v)
        
     for x in G[v]:
         if x[0] not in discoveredList:
@@ -271,11 +275,12 @@ def iterativeDeepeningSearch(G,v,goal):
         
                 
 #params are graph, vertex, and x,y coords of goal
-def greedySearch(G,v,goal, x,y):
+def greedySearch(G,v,goal):
     global nodesTraversed
     nodesTraversed += 1
     print(v)
-
+    exploredList.append(v)
+    found = False
     if v == goal: #found goal state
         success = "found " + goal
         print(success)
@@ -283,13 +288,21 @@ def greedySearch(G,v,goal, x,y):
         output = "found with depth limit " + str(limit)
         print(output)
         foundList.append(1)
+        found = True
         return 1
-
-        adjacencies = []
-        for x in G[v]:
-            if x[0] not in discoveredList:
-                discoveredList.append(v)
-                return recursiveDLS(G, x[0], goal, limit - 1)
+    
+    adjacencies = []
+   
+    for x in G[v]:
+        if x[0] not in discoveredList:
+            discoveredList.append(x[0])
+            adjacencies.append((x[0], x[-1]))
+            
+    adjacencies.sort(key=lambda x: x[0])
+    print(adjacencies)
+    for x in adjacencies:
+        if x[0] not in exploredList:
+            return greedySearch(G, x[0], goal)
                 
     return 0
     
@@ -305,7 +318,7 @@ def menu():
     print("6: run BFS on on all graphs and output stats")
     print("7: run recursiveDLS on graph by index")
     print("8: run IDFS on all graphs and output stats")
-    print("9: construct shortest linear dist list for graphby index")
+    print("9: perform greedy search on graph by index")
     option = input("what next?")
 
     if option == '1':
@@ -313,7 +326,7 @@ def menu():
         seed = input("input random seed")
         random.seed(int(seed))
         print("making 100 graphs from seed")
-        for x in range(16):  #will be 100, but not spending the time on that now
+        for x in range(8):  #will be 100, but not spending the time on that now
             makeGraph()
                 
         menu()
@@ -324,6 +337,7 @@ def menu():
 
         for x in alphabet: #this way we get it in alpha order instead of
             print(x, graph[x])#dictionary key order. Much more readable
+        print(SLDlist[int(index)])
             
         menu()
 
@@ -438,9 +452,13 @@ def menu():
         print(output)
         menu()
 
-        if option == '9':
-            SLDlist.clear()
-            index = input("enter an index (integer)")
+    if option == '9':
+        exploredList.clear()
+        discoveredList.clear()
+        index = input("enter an index (integer)")
+        greedySearch(graphList[int(index)], 'a', 'z')
+        menu()
+       
             
 menu()
 
