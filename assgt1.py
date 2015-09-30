@@ -3,6 +3,7 @@ import random
 import math
 import collections
 import time
+from enum import Enum
 #import pdb; pdb.set_trace()
 
 #some global variables, global for convenience
@@ -17,8 +18,18 @@ neighbourList = []
 
 #list of vertices discovered (traversed) in DFS
 discoveredList = []
+exploredList = []
 
 exploredCount = []
+
+foundList = []
+
+nodesTraversed = 0
+
+class result(Enum):
+    failure = 0
+    success = 1
+    cutoff = 2
 
 def setExploredCount(x):
     exploredCount = x
@@ -172,38 +183,86 @@ for x in graph:
 
 #adapted from pseudocode from breadth-first search wikipedia entry
 def breadthFirstSearch(G, v, goal):
+    global nodesTraversed
     discoveredList.append(v) #discovered list is the frontier here
-    exploredList = []
 
     while(len(discoveredList) > 0):
         u = discoveredList.pop(0)
         exploredList.append(u)
+        nodesTraversed += 1
     #    print(u)
         if u == goal:
             exploredCount.append(len(exploredList))
             print("found it")
-            break
-
+            foundList.append(1)
+            return
+        
         for x in G[u]:
             if x[0] not in discoveredList and x[0] not in exploredList:
                 discoveredList.append(x[0])
+                exploredList.append(x[0])
                 if(x[0] == goal):
                     break
 
 #adapted from pseudocode from depth-first search wikipedia entry
 def depthFirstSearch(G, v, goal):
+    global nodesTraversed
     discoveredList.append(v)
-   
-    if( goal in discoveredList):
+    nodesTraversed += 1
+    if( v == goal):
         success = "found " + goal
         print(success)
+        foundList.append(1)
         return
- #   print(v)
+    print(v)
+       
     for x in G[v]:
         if x[0] not in discoveredList:
             depthFirstSearch(G, x[0], goal)
+            
+
+#code adapted from class text
+            #recursive depth limited search
+def recursiveDLS(G, v, goal, limit):
+    global nodesTraversed
+    nodesTraversed += 1
+    print(v)
+    print(limit)
+
+    if v == goal: #found goal state
+        success = "found " + goal
+        print(success)
+        foundList.append(1)
+        output = "found with depth limit " + str(limit)
+        print(output)
+        foundList.append(1)
+        return 1
+
+    elif limit == 0:
+        discoveredList.clear()
+        return 2
+
+    else:
+        if limit > 0:
+            
+            for x in G[v]:
+                if x[0] not in discoveredList:
+                    discoveredList.append(v)
+                    return recursiveDLS(G, x[0], goal, limit - 1)
+                
+    return 0
+
+    
+def iterativeDeepeningSearch(G,v,goal):
+    discoveredList.clear()
+    discoveredList.append(v)
+    for depth in range(0,100):
+        result = recursiveDLS(G,v,goal,depth)
+        if result !=2:
+            return result
     
 def menu():
+    print('\n')
     print("Top Menu")
     print("enter an option by number")
     print("1: create 100 different graphs with user input random seed")
@@ -212,6 +271,8 @@ def menu():
     print("4: run DFS on all graphs and output stats")
     print("5: run BFS on graph by index")
     print("6: run BFS on on all graphs and output stats")
+    print("7: run recursiveDLS on graph by index")
+    print("8: run IDFS on all graphs and output stats")
     option = input("what next?")
 
     if option == '1':
@@ -237,22 +298,35 @@ def menu():
         discoveredList.clear()
         index = input("enter an index (integer)")
         depthFirstSearch(graphList[int(index)], 'a', 'z')
+
         menu()
 
     if option == '4':
-        averageTime = 0
+        totalTime = 0
+        global nodesTraversed
+        nodesTraversed = 0
+        foundList.clear()
         averageNodesVisited = 0
         for x in graphList:
-            print('\n')
             discoveredList.clear()
             t0 = time.time()
-            depthFirstSearch(x, 'a','z')
+            foundList.append(depthFirstSearch(x, 'a','z'))
             totalTime += time.time() - t0
             averageNodesVisited += len(discoveredList)
-        averageNodesVisited /= len(graphList)
-        output = "average time of DFS on all graphs was " + str(totalTime)
+        
+        foundCount = 0
+
+        for x in foundList:
+            if x == 1:
+                foundCount +=1
+                
+        output = "found the goal " + str(foundCount) + "of " + str(len(graphList)) + "times"
         print(output)
-        output = "average nodes visited (space complexity of discovered list) was " + str(averageNodesVisited)
+        output = "Total time to run DFS on all graphs: " + str(totalTime)
+        print(output)
+        output = "average nodes visited (time complexity) was " + str(nodesTraversed / len(graphList))
+        print(output)
+        output = "average space complexity (list of visted nodes) was " + str(averageNodesVisited /len(graphList))
         print(output)
         menu()
 
@@ -263,26 +337,71 @@ def menu():
         menu()
 
     if option == '6':
-        averageTime = 0
+        totalTime = 0
+        global nodesTraversed
+        nodesTraversed = 0
         averageNodesVisited = 0
         exploredCount.clear()
+        foundList.clear()
+        
+        for x in graphList:
+            print('\n')
+            discoveredList.clear()
+            exploredList.clear()
+            t0 = time.time()
+            breadthFirstSearch(x, 'a','z')
+            totalTime += time.time() - t0
+            averageNodesVisited += len(exploredList)
+        foundCount = 0
+        
+        for x in foundList:
+            if x == 1:
+                foundCount +=1
+        output = "found the goal " + str(foundCount) + "of " + str(len(graphList)) + "times"
+        print(output)
+        averageNodesVisited
+        output = "total time to run BFS on all graphs: " + str(totalTime)
+        print(output)
+        output = "average nodes visited (time complexity) was " + str(nodesTraversed / len(graphList))
+        print(output)
+        output = "average space complexity (list of visted nodes) was " + str(averageNodesVisited / len(graphList))
+        print(output)
+        menu()
 
+    if option == '7':
+        discoveredList.clear()
+        index = input("enter an index (integer)")
+        print(str(iterativeDeepeningSearch(graphList[int(index)], 'a', 'z')))
+        menu()
+
+    if option == '8':
+        totalTime = 0
+        global nodesTraversed
+        nodesTraversed = 0
+        averageNodesVisited = 0
+        exploredCount.clear()
+        foundList.clear()
+        
         for x in graphList:
             print('\n')
             discoveredList.clear()
             t0 = time.time()
-            breadthFirstSearch(x, 'a','z')
-            averageTime += time.time() - t0
-
-        for x in exploredCount:
-            averageNodesVisited += x
-
-        averageNodesVisited += len(discoveredList)
-        averageTime /= len(graphList)
-        averageNodesVisited /= len(graphList)
-        output = "average time of DFS on all graphs was " + str(averageTime)
+            iterativeDeepeningSearch(x, 'a','z')
+            totalTime += time.time() - t0
+            averageNodesVisited += len(discoveredList)
+        foundCount = 0
+        
+        for x in foundList:
+            if x == 1:
+                foundCount +=1
+        output = "found the goal " + str(foundCount) + "of " + str(len(graphList)) + "times"
         print(output)
-        output = "average nodes visited (space complexity of discovered list) was " + str(averageNodesVisited)
+        nodesTraversed /= len(graphList)
+        output = "total time to run IDFS on all graphs: " + str(totalTime)
+        print(output)
+        output = "average nodes visited (time complexity) was " + str(nodesTraversed)
+        print(output)
+        output = "average space complexity (list of visted nodes) was " + str(averageNodesVisited / len(graphList))
         print(output)
         menu()
 menu()
