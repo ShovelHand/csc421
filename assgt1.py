@@ -34,6 +34,7 @@ yGoal = -1
 exploredCount = []
 foundList = []
 nodesTraversed = 0
+pathCost = 0
 
 #a boolean to stop search execution
 found = False
@@ -225,13 +226,20 @@ for x in graph:
 def breadthFirstSearch(G, v, goal):
     global nodesTraversed
     global found
+    global pathCost
+    pathCost = 0
     discoveredList.append(v) #discovered list is the frontier here
     while(len(discoveredList) > 0):
         u = discoveredList.pop(0)
-        exploredList.append(u)
+        if u not in exploredList:
+            exploredList.append(u)
         nodesTraversed += 1
         print(u)
         if u == goal:
+            for x in range(len(exploredList)-1):
+                for q in G[exploredList[x]]:
+                    if q[0] == exploredList[x+1]:
+                        pathCost += q[1]
             exploredCount.append(len(exploredList))
             print("found it")
             foundList.append(1)
@@ -251,6 +259,8 @@ def depthFirstSearch(G, v, goal):
     if found == True:
         return
     global nodesTraversed
+    global pathCost
+    pathCost = 0
     discoveredList.append(v)
     nodesTraversed += 1
     if( v == goal):
@@ -258,6 +268,8 @@ def depthFirstSearch(G, v, goal):
         success = "found " + goal
         print(success)
         foundList.append(1)
+        print(exploredList)
+        print(pathCost)
         return
     print(v)
        
@@ -270,11 +282,16 @@ def depthFirstSearch(G, v, goal):
 #recursive depth limited search. return 1 for success, 2 for limit cutoff, 0 for failure
 def recursiveDLS(G, v, goal, limit):
     global nodesTraversed
+    global found
+    if found == True:
+        return
     nodesTraversed += 1
     print(v)
-    print(limit)
+    discoveredList.append(v)
+  #  print(limit)
 
     if v == goal: #found goal state
+        found = True
         success = "found " + goal
         print(success)
         foundList.append(1)
@@ -284,7 +301,6 @@ def recursiveDLS(G, v, goal, limit):
         return 1
 
     elif limit == 0:
-        discoveredList.clear()
         return 2
 
     else:
@@ -293,17 +309,17 @@ def recursiveDLS(G, v, goal, limit):
             for x in G[v]:
                 if x[0] not in discoveredList:
                     discoveredList.append(v)
-                    return recursiveDLS(G, x[0], goal, limit - 1)
+                    recursiveDLS(G, x[0], goal, limit - 1)
                 
     return 0
 
     
 def iterativeDeepeningSearch(G,v,goal):
-    for depth in range(0,100):
+    for depth in range(1,100):
         discoveredList.clear()
-        result = recursiveDLS(G,v,goal,depth)
-        if result !=2:
-            return result
+        recursiveDLS(G,v,goal,depth)
+     #   if result !=2:
+      #      return result
         
                 
 #params are graph, vertex, and x,y coords of goal. index is passed for distance lists
@@ -551,6 +567,7 @@ def menu():
     if option == '5':
         found = False
         discoveredList.clear()
+        exploredList.clear()
         index = input("enter an index (integer)")
         breadthFirstSearch(graphList[int(index)], 'a', 'z')
         menu()
@@ -591,7 +608,7 @@ def menu():
         found = False
         discoveredList.clear()
         index = input("enter an index (integer)")
-        print(str(iterativeDeepeningSearch(graphList[int(index)], 'a', 'z')))
+        iterativeDeepeningSearch(graphList[int(index)], 'a', 'z')
         menu()
 
     if option == '8':
