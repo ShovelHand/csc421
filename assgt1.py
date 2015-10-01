@@ -247,10 +247,14 @@ def breadthFirstSearch(G, v, goal):
 
 #adapted from pseudocode from depth-first search wikipedia entry
 def depthFirstSearch(G, v, goal):
+    global found
+    if found == True:
+        return
     global nodesTraversed
     discoveredList.append(v)
     nodesTraversed += 1
     if( v == goal):
+        found = True
         success = "found " + goal
         print(success)
         foundList.append(1)
@@ -353,12 +357,12 @@ def greedySearch(G,v,goal,index):
     dX = abs(X - goalX)
     dY = abs(Y - goalY)
     adjacencies.sort(key = lambda x : x[1])
-    print(adjacencies)
+ #   print(adjacencies)
 
     heuristicModifiedList =[]
     if(dY > dX):
 
-        print("favour vertical move")
+   #     print("favour vertical move")
         for k in adjacencies:
             for l in nodeCoords:
                 if k[0] == l[0]:
@@ -366,19 +370,113 @@ def greedySearch(G,v,goal,index):
 
     else: #not elif to break ties where dX = dY
 
-        print("favour horizontal move")
+   #     print("favour horizontal move")
         for k in adjacencies:
             for l in nodeCoords:
                 if k[0] == l[0]:
                     heuristicModifiedList.append((k[0], k[1] + abs(l[1] - goalX)))
     
     heuristicModifiedList.sort(key = lambda x : x[1])
-    print(heuristicModifiedList)
+  #  print(heuristicModifiedList)
     for x in heuristicModifiedList:
         if x[0] not in exploredList:
-            greedySearch(G,x[0],'z',index)
+            greedySearch(G,x[0],'z',index) #f(n) = h1(n) + h2(n)
+
     return 0
 
+#finally I get to use those next-node distances in the Graph structure!
+#f(n) = g(n) + h1(n) + h2(n)
+#code mostly copied from greedy search
+def AStarSearch(G,v,goal,index):
+    global nodesTraversed
+    nodesTraversed += 1
+    global found
+    if found == True: #don't go through remaining nodes in frontier if done
+        return
+
+    exploredList.append(v)
+    distList = SLDlist[index]
+    nodeCoords = nodeCoordList[index]
+
+    if v == goal: #found goal state
+        success = "found " + goal
+        print(success)
+        foundList.append(1)
+        found = True
+        return 1
+    
+    adjacencies = []
+
+    for x in G[v]:
+        if x[0] not in discoveredList:
+            discoveredList.append(x[0])
+            for item in distList:
+                if item[0] == x[0]:
+                    adjacencies.append(item)
+                    
+    print(v)
+    #fisrt heuristic, SLD is determined
+
+    #now for second heuristic, single axis distance
+    #given more time, I'd have searched for a better solution to this than a bunch of time
+    #consuming for loops
+    goalX = 0
+    goalY = 0
+    
+    for x in nodeCoords: #get x,y coords of goal state
+        if x[0] == 'z':
+            goalX = x[1]
+            goalY = x[2]
+
+#see if we should favour a horizontal or vertical move. Greatest delta wins
+    for x in nodeCoords: 
+        if x[0] == v:
+            X = x[1]
+            Y = x[2]
+
+    dX = abs(X - goalX)
+    dY = abs(Y - goalY)
+    adjacencies.sort(key = lambda x : x[1])
+ #   print(adjacencies)
+
+    heuristicModifiedList =[]
+    if(dY > dX):
+
+  #      print("favour vertical move")
+        for k in adjacencies:
+            cost = 0
+            for x in G[v]:
+                        if x[0] == k[0]:
+                            cost = k[1]
+                        #    print(adjacencies)
+                         #   print(cost)
+            for l in nodeCoords:
+                if k[0] == l[0]:
+                    heuristicModifiedList.append((k[0], k[1] + abs(l[2] - goalY) + cost))
+
+    else: #not elif to break ties where dX = dY
+
+  #      print("favour horizontal move")
+        for k in adjacencies:
+            cost = 0
+            for x in G[v]:
+                        if x[0] == k[0]:
+                            cost = k[1]
+                            print(adjacencies)
+                            print(cost)
+            for l in nodeCoords:
+                if k[0] == l[0]:
+                    heuristicModifiedList.append((k[0], k[1] + abs(l[1] - goalX)+ cost))
+   
+    heuristicModifiedList.sort(key = lambda x : x[1])
+ #   print(heuristicModifiedList)
+    for x in heuristicModifiedList:
+        if x[0] not in exploredList:
+            AStarSearch(G,x[0],'z',index) #f(n) = h1(n) + h2(n)
+    return 0
+
+
+    
 def menu():
     print('\n')
     print("Top Menu")
@@ -392,6 +490,9 @@ def menu():
     print("7: run recursiveDLS on graph by index")
     print("8: run IDFS on all graphs and output stats")
     print("9: perform greedy search on graph by index")
+    print("10: perform A* search on a graph by index")
+    print("11: run greedy search on all graphs")
+    print("12: run A* search on all graphs")
     option = input("what next?")
     global found
     global nodesTraversed
@@ -400,7 +501,7 @@ def menu():
         seed = input("input random seed")
         random.seed(int(seed))
         print("making 100 graphs from seed")
-        for x in range(8):  #will be 100, but not spending the time on that now
+        for x in range(20):  #will be 100, but not spending the time on that now
             makeGraph()
                 
         menu()
@@ -462,7 +563,6 @@ def menu():
         foundList.clear()
         
         for x in graphList:
-            print('\n')
             found = False
             discoveredList.clear()
             exploredList.clear()
@@ -470,6 +570,7 @@ def menu():
             breadthFirstSearch(x, 'a','z')
             totalTime += time.time() - t0
             averageNodesVisited += len(exploredList)
+
         foundCount = 0
         
         for x in foundList:
@@ -531,6 +632,86 @@ def menu():
         index = input("enter an index (integer)")
         greedySearch(graphList[int(index)], 'a', 'z', int(index))
         menu()
+
+    if option == '10':
+        found = False
+        exploredList.clear()
+        discoveredList.clear()
+        index = input("enter an index (integer)")
+        AStarSearch(graphList[int(index)], 'a', 'z', int(index))
+        menu()
+
+    if option == '11':
+        found = False
+        totalTime = 0
+        nodesTraversed = 0
+        averageNodesVisited = 0
+        exploredCount.clear()
+        foundList.clear()
+        exploredList.clear()
+        discoveredList.clear()
+
+        index = 0
+
+        for x in graphList:
+            found = False
+            exploredList.clear()
+            discoveredList.clear()
+            t0 = time.time()
+            greedySearch(x, 'a','z', index)
+            index += 1
+            totalTime += time.time() - t0
+            averageNodesVisited += len(discoveredList)
+
+        foundCount = 0
+        
+        for x in foundList:
+            if x == 1:
+                foundCount +=1
+        output = "found the goal " + str(foundCount) + "of " + str(len(graphList)) + "times"
+        print(output)
+        nodesTraversed /= len(graphList)
+        output = "total time to run greedy on all graphs: " + str(totalTime)
+        print(output)
+        output = "average nodes visited (time complexity) was " + str(nodesTraversed)
+        print(output)
+        output = "average space complexity (list of visted nodes) was " + str(averageNodesVisited / len(graphList))
+        print(output)
+        menu()
+
+
+    if option == '12':
+        totalTime = 0
+        nodesTraversed = 0
+        averageNodesVisited = 0
+        exploredCount.clear()
+        foundList.clear()
+
+        index = 0
+        for x in graphList:
+            found = False
+            exploredList.clear()
+            discoveredList.clear()
+            t0 = time.time()
+            AStarSearch(x, 'a','z', index)
+            index += 1
+            totalTime += time.time() - t0
+            averageNodesVisited += len(discoveredList)
+        foundCount = 0
+        
+        for x in foundList:
+            if x == 1:
+                foundCount +=1
+        output = "found the goal " + str(foundCount) + "of " + str(len(graphList)) + "times"
+        print(output)
+        nodesTraversed /= len(graphList)
+        output = "total time to run A* on all graphs: " + str(totalTime)
+        print(output)
+        output = "average nodes visited (time complexity) was " + str(nodesTraversed)
+        print(output)
+        output = "average space complexity (list of visted nodes) was " + str(averageNodesVisited / len(graphList))
+        print(output)
+        menu()        
        
             
 menu()
