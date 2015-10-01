@@ -16,27 +16,48 @@ graphList = []
 #used to keep track of nearest neighbours of a node when determining adjacency
 neighbourList = [] 
 
-#list of vertices discovered (traversed) in DFS
+#list of vertices discovered by a search
 discoveredList = []
+#list of vertices traversed by a search
 exploredList = []
+
+#lists to provide heuristics for an informed search
+#list straight line distance from any node to 'z'. This is a list of lists for every graph
 SLDlist =[]
-#the following x,y are used to get coords of goal city (z)
+#a list of lists. provides (x,y) coords for every node in a graph
+nodeCoordList = []
+#the following x,y are used to get coords of goal city (z) to make SLDlist entries
 xGoal = -1
 yGoal = -1
 
+#some places to store stats gathered by a search TODO: improve this
 exploredCount = []
-
 foundList = []
-
 nodesTraversed = 0
 
+#a boolean to stop search execution
+found = False
+
+def printGraph(index):
+    if index not in range(len(graphList)):
+        print("index not in list ")
+    else:
+        graph = graphList[int(index)]
+        print("graph dictionary: ")
+        for x in alphabet: #this way we get it in alpha order instead of
+            print(x, graph[x])#dictionary key order. Much more readable
+        print("SLD to 'z' for each city: ")
+        print(SLDlist[int(index)])
+            
+    menu()
 #determines the distance between city1(x1,y1) and city2(x2,y2)
 def euclidDist(x1,y1,x2,y2):
     return math.sqrt((x1-x2)**2 +(y1-y2)**2)
 
-#graph generating functions
-#none of this is done efficiently at the moment 
-#return nearest five cities by euclidean distance
+
+'''*************graph generating functions***************'''
+
+#takes list of city's neighbours and return closest five
 def getFiveNearest(grid, lst, i ,j):
     nearestFive = []
     for city in lst:
@@ -49,7 +70,8 @@ def getFiveNearest(grid, lst, i ,j):
    # print(nearestFive[:5])
    
     return nearestFive[:5]
-                      
+
+#makes sub-array around a city and increases until at least five other cities are in there                   
 def findNeighbours(grid, c, i, j, lst, depth):
     leftCol = i -depth
     if leftCol < 0:
@@ -102,19 +124,24 @@ def populateAdjMatrix(city, lst, adjMatrix, graph):
 
 #make list of SLD from all cities to goal, sld to z is last element in every
 #entry of the graph dictionary
-def makeSLDlist(graph, grid):
+def makeHeuristicList(graph, grid):
     global xGoal
     global yGoal
-    foundGoal = False
     lst =[]
+    nodeCoords = []
     for j in range(100):
         for i in range(100):
             if grid[i][j] in alphabet:
                 lst.append((grid[i][j], euclidDist(i,j,xGoal,yGoal)))
+                nodeCoords.append((grid[i][j], i, j))
                 #graph[grid[i][j]].append(euclidDist(i,j,xGoal,yGoal))
                #print(graph[grid[i][j]][0][0])
     sorted(lst, key=lambda x: x[0])
     SLDlist.append(lst)
+    nodeCoordList.append(nodeCoords)
+    
+   
+    
 
                 
 def makeGraph():
@@ -164,7 +191,7 @@ def makeGraph():
             if adjMatrix[i][j] == 1 and adjMatrix[j][i] ==0:
                 adjMatrix[j][i] = 1
 
-    makeSLDlist(graph, grid)
+    makeHeuristicList(graph, grid)
     sorted(graph.items(), key=lambda x: x[0]) 
     graphList.append(graph)  
 
@@ -197,17 +224,18 @@ for x in graph:
 #adapted from pseudocode from breadth-first search wikipedia entry
 def breadthFirstSearch(G, v, goal):
     global nodesTraversed
+    global found
     discoveredList.append(v) #discovered list is the frontier here
-
     while(len(discoveredList) > 0):
         u = discoveredList.pop(0)
         exploredList.append(u)
         nodesTraversed += 1
-    #    print(u)
+        print(u)
         if u == goal:
             exploredCount.append(len(exploredList))
             print("found it")
             foundList.append(1)
+            found = True
             return
         
         for x in G[u]:
@@ -274,19 +302,21 @@ def iterativeDeepeningSearch(G,v,goal):
             return result
         
                 
-#params are graph, vertex, and x,y coords of goal
-def greedySearch(G,v,goal):
+#params are graph, vertex, and x,y coords of goal. index is passed for distance lists
+#that must be looked up
+def greedySearch(G,v,goal,index):
     global nodesTraversed
     nodesTraversed += 1
-    print(v)
+    global found
+    if found == True: #don't go through remaining nodes in frontier if done
+        return
     exploredList.append(v)
-    found = False
+    distList = SLDlist[index]
+    nodeCoords = nodeCoordList[index]
+
     if v == goal: #found goal state
         success = "found " + goal
         print(success)
-        foundList.append(1)
-        output = "found with depth limit " + str(limit)
-        print(output)
         foundList.append(1)
         found = True
         return 1
@@ -296,21 +326,64 @@ def greedySearch(G,v,goal):
     for x in G[v]:
         if x[0] not in discoveredList:
             discoveredList.append(x[0])
-            adjacencies.append((x[0], x[-1]))
-            
-    adjacencies.sort(key=lambda x: x[0])
-    print(adjacencies)
-    for x in adjacencies:
-        if x[0] not in exploredList:
-            return greedySearch(G, x[0], goal)
-                
-    return 0
+            for item in distList:
+                if item[0] == x[0]:
+                    adjacencies.append(item)
+                    
+    print(v)
+    #fisrt heuristic, SLD is determined
+
+    #now for second heuristic, single axis distance
+    #given more time, I'd have searched for a better solution to this than a bunch of time
+    #consuming for loops
+    goalX = 0
+    goalY = 0
     
+    for x in nodeCoords: #get x,y coords of goal state
+        if x[0] == 'z':
+            goalX = x[1]
+            goalY = x[2]
+
+#see if we should favour a horizontal or vertical move. Greatest delta wins
+    for x in nodeCoords: 
+        if x[0] == v:
+            X = x[1]
+            Y = x[2]
+
+    dX = abs(X - goalX)
+    dY = abs(Y - goalY)
+    adjacencies.sort(key = lambda x : x[1])
+    print(adjacencies)
+
+    heuristicModifiedList =[]
+    if(dY > dX):
+
+        print("favour vertical move")
+        for k in adjacencies:
+            for l in nodeCoords:
+                if k[0] == l[0]:
+                    heuristicModifiedList.append((k[0], k[1] + abs(l[2] - goalY)))
+
+    else: #not elif to break ties where dX = dY
+
+        print("favour horizontal move")
+        for k in adjacencies:
+            for l in nodeCoords:
+                if k[0] == l[0]:
+                    heuristicModifiedList.append((k[0], k[1] + abs(l[1] - goalX)))
+    
+    heuristicModifiedList.sort(key = lambda x : x[1])
+    print(heuristicModifiedList)
+    for x in heuristicModifiedList:
+        if x[0] not in exploredList:
+            greedySearch(G,x[0],'z',index)
+    return 0
+
 def menu():
     print('\n')
     print("Top Menu")
     print("enter an option by number")
-    print("1: create 100 different graphs with user input random seed")
+    
     print("2: print a graph dictionary by index")
     print("3: depth-first-search on graph by index")
     print("4: run DFS on all graphs and output stats")
@@ -320,7 +393,8 @@ def menu():
     print("8: run IDFS on all graphs and output stats")
     print("9: perform greedy search on graph by index")
     option = input("what next?")
-
+    global found
+    global nodesTraversed
     if option == '1':
       #  graphList = []
         seed = input("input random seed")
@@ -332,16 +406,12 @@ def menu():
         menu()
 
     if option == '2':
+       
         index = input("enter an index (integer)")
-        graph = graphList[int(index)]
-
-        for x in alphabet: #this way we get it in alpha order instead of
-            print(x, graph[x])#dictionary key order. Much more readable
-        print(SLDlist[int(index)])
-            
-        menu()
+        printGraph(int(index))
 
     if option == '3':
+        found = False
         discoveredList.clear()
         index = input("enter an index (integer)")
         depthFirstSearch(graphList[int(index)], 'a', 'z')
@@ -350,11 +420,11 @@ def menu():
 
     if option == '4':
         totalTime = 0
-        global nodesTraversed
         nodesTraversed = 0
         foundList.clear()
         averageNodesVisited = 0
         for x in graphList:
+            found = False
             discoveredList.clear()
             t0 = time.time()
             foundList.append(depthFirstSearch(x, 'a','z'))
@@ -378,6 +448,7 @@ def menu():
         menu()
 
     if option == '5':
+        found = False
         discoveredList.clear()
         index = input("enter an index (integer)")
         breadthFirstSearch(graphList[int(index)], 'a', 'z')
@@ -385,7 +456,6 @@ def menu():
 
     if option == '6':
         totalTime = 0
-        global nodesTraversed
         nodesTraversed = 0
         averageNodesVisited = 0
         exploredCount.clear()
@@ -393,6 +463,7 @@ def menu():
         
         for x in graphList:
             print('\n')
+            found = False
             discoveredList.clear()
             exploredList.clear()
             t0 = time.time()
@@ -416,6 +487,7 @@ def menu():
         menu()
 
     if option == '7':
+        found = False
         discoveredList.clear()
         index = input("enter an index (integer)")
         print(str(iterativeDeepeningSearch(graphList[int(index)], 'a', 'z')))
@@ -423,13 +495,13 @@ def menu():
 
     if option == '8':
         totalTime = 0
-        global nodesTraversed
         nodesTraversed = 0
         averageNodesVisited = 0
         exploredCount.clear()
         foundList.clear()
         
         for x in graphList:
+            found = False
             print('\n')
             discoveredList.clear()
             t0 = time.time()
@@ -453,10 +525,11 @@ def menu():
         menu()
 
     if option == '9':
+        found = False
         exploredList.clear()
         discoveredList.clear()
         index = input("enter an index (integer)")
-        greedySearch(graphList[int(index)], 'a', 'z')
+        greedySearch(graphList[int(index)], 'a', 'z', int(index))
         menu()
        
             
